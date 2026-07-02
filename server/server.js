@@ -1,5 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -10,6 +11,10 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// Allows the Next.js client (localhost:3000) to call this API (localhost:5000)
+app.use(cors());
 
 // ── Body Parsers ──────────────────────────────────────────────────────────────
 app.use(express.json());           // Parse incoming JSON request bodies
