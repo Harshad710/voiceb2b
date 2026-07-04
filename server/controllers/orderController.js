@@ -61,10 +61,17 @@ const createOrder = async (req, res, next) => {
       return sum + (item.quantity * item.priceAtPurchase);
     }, 0);
 
+    // Compute expectedDeliveryDate server-side: today + random 1–4 days.
+    // Math.floor(Math.random() * 4) gives 0-3, so +1 gives the 1–4 day range.
+    const daysToAdd = Math.floor(Math.random() * 4) + 1;
+    const expectedDeliveryDate = new Date();
+    expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + daysToAdd);
+
     const order = await Order.create({
       retailerId,
       items,
       totalAmount,
+      expectedDeliveryDate,
       status: 'PENDING',
     });
 

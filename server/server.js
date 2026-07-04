@@ -21,6 +21,7 @@ app.use(express.json());           // Parse incoming JSON request bodies
 app.use(express.urlencoded({ extended: false })); // Parse URL-encoded bodies
 
 // ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/auth',     require('./routes/authRoutes'));   // Public: register & login
 app.use('/api/users',    require('./routes/userRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders',   require('./routes/orderRoutes'));

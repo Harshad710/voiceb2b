@@ -50,6 +50,12 @@ const orderSchema = new mongoose.Schema(
       },
       default: 'PENDING',
     },
+    // Estimated delivery date — computed server-side as today + 1-4 days.
+    // Displayed in the retailer's order history so they know when to expect delivery.
+    expectedDeliveryDate: {
+      type: Date,
+      required: [true, 'Expected delivery date is required'],
+    },
   },
   {
     timestamps: true,
