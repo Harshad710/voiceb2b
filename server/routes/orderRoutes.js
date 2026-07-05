@@ -8,19 +8,27 @@ const {
   updateOrderStatus,
 } = require('../controllers/orderController');
 
-// /api/orders         — Admin: list all orders
-// /api/orders         — Retailer: submit new order
-router.route('/').get(getOrders).post(createOrder);
+const protect  = require('../middleware/authMiddleware');
+const isAdmin  = require('../middleware/isAdmin');
 
-// /api/orders/retailer/:retailerId  — Retailer: fetch their own order history
-// NOTE: This specific route must be defined BEFORE /:id to avoid Express
-// treating "retailer" as a dynamic :id segment.
+// ── /api/orders ──────────────────────────────────────────────────────────────
+// GET  — Admin: list ALL orders across all retailers          → protected
+// POST — Retailer: submit a new order                        → open (Phase 3 auth added later)
+router.route('/')
+  .get(protect, isAdmin, getOrders)
+  .post(createOrder);
+
+// ── /api/orders/retailer/:retailerId ─────────────────────────────────────────
+// NOTE: Defined BEFORE /:id so Express doesn't swallow "retailer" as a dynamic id.
+// GET — Retailer: fetch their own order history              → open (Phase 3 concern)
 router.route('/retailer/:retailerId').get(getOrdersByRetailer);
 
-// /api/orders/:id              — Get single order detail
+// ── /api/orders/:id ──────────────────────────────────────────────────────────
+// GET — single order detail                                  → open for now
 router.route('/:id').get(getOrderById);
 
-// /api/orders/:id/status       — Admin: update status only (PATCH)
-router.route('/:id/status').patch(updateOrderStatus);
+// ── /api/orders/:id/status ───────────────────────────────────────────────────
+// PATCH — Admin: advance order through PENDING→PROCESSING→DELIVERED  → protected
+router.route('/:id/status').patch(protect, isAdmin, updateOrderStatus);
 
 module.exports = router;

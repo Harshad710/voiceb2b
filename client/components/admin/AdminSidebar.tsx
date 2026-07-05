@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ClipboardList, Package2 } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { ClipboardList, Package2, LogOut } from 'lucide-react';
 
 const navItems = [
   {
@@ -17,6 +17,12 @@ const navItems = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router   = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    router.push('/admin/login');
+  };
 
   return (
     <aside className="w-64 min-h-screen flex flex-col bg-[#0d1426] border-r border-slate-800/60">
@@ -66,10 +72,21 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <div className="p-4 border-t border-slate-800/60">
+      {/* ── Footer — Logout ─────────────────────────────────────────────── */}
+      <div className="p-4 border-t border-slate-800/60 space-y-3">
+        {/* Logout button */}
+        <button
+          id="admin-logout-btn"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-150 group"
+        >
+          <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-400 transition-colors" />
+          Log out
+        </button>
+
+        {/* Build info */}
         <div className="px-3 py-2 rounded-lg bg-slate-800/40">
-          <p className="text-[11px] text-slate-500 font-medium">Phase 2 — MVP</p>
+          <p className="text-[11px] text-slate-500 font-medium">Phase 2.5b — MVP</p>
           <p className="text-[10px] text-slate-700 mt-0.5">Admin Dashboard</p>
         </div>
       </div>

@@ -8,10 +8,23 @@ const {
   deleteUser,
 } = require('../controllers/userController');
 
-// /api/users
-router.route('/').get(getUsers).post(createUser);
+const protect  = require('../middleware/authMiddleware');
+const isAdmin  = require('../middleware/isAdmin');
 
-// /api/users/:id
-router.route('/:id').get(getUserById).put(updateUser).delete(deleteUser);
+// All user-management routes are admin-only.
+// This closes the role-tampering hole: POST /api/users can no longer be used
+// by anonymous clients to create arbitrary-role accounts. Self-registration
+// must go through POST /api/auth/register, which hard-codes role: 'RETAILER'.
+
+// ── /api/users ───────────────────────────────────────────────────────────────
+router.route('/')
+  .get(protect, isAdmin, getUsers)
+  .post(protect, isAdmin, createUser);
+
+// ── /api/users/:id ───────────────────────────────────────────────────────────
+router.route('/:id')
+  .get(protect, isAdmin, getUserById)
+  .put(protect, isAdmin, updateUser)
+  .delete(protect, isAdmin, deleteUser);
 
 module.exports = router;
