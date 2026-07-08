@@ -18,6 +18,11 @@ export interface Product {
   name: string;
   brand: string;
   price: number;
+  category: string;
+  weight?: string;
+  imageUrl?: string;
+  aliases: string[];
+  inStock: boolean;
 }
 
 export interface OrderItem {
