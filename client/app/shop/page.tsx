@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Search, Package, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Package, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { fetchProducts } from '@/lib/shopApi';
+import { useCartStore } from '@/lib/cartStore';
 import { Product } from '@/lib/types';
 
 export default function ShopHome() {
@@ -11,6 +13,15 @@ export default function ShopHome() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Cart store
+  const cartItems = useCartStore((s) => s.items);
+  const addItem = useCartStore((s) => s.addItem);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+
+  // Total item count for the badge
+  const totalCartQty = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   useEffect(() => {
     async function loadProducts() {
@@ -36,16 +47,13 @@ export default function ShopHome() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.brand.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
       return matchesSearch && matchesCategory;
     });
   }, [products, searchQuery, selectedCategory]);
-
-  const handleAdd = (product: Product) => {
-    console.log('TODO: Phase 3b - Add to cart', product);
-  };
 
   if (loading) {
     return (
@@ -59,7 +67,7 @@ export default function ShopHome() {
     return (
       <div className="p-4 text-center text-red-500 mt-20">
         <p>Error: {error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-[#185FA5] text-white rounded-lg text-sm"
         >
@@ -73,10 +81,30 @@ export default function ShopHome() {
     <div className="min-h-screen bg-slate-50 pt-[env(safe-area-inset-top)]">
       {/* Header / Search */}
       <div className="bg-[#185FA5] px-4 pt-6 pb-6 rounded-b-2xl shadow-sm sticky top-0 z-10">
-        <div className="mb-4">
-          <h1 className="text-white text-xl font-bold">VoiceB2B Shop</h1>
-          <p className="text-blue-100 text-sm">Order fresh stock today</p>
+        {/* Title row with cart icon */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-white text-xl font-bold">VoiceB2B Shop</h1>
+            <p className="text-blue-100 text-sm">Order fresh stock today</p>
+          </div>
+
+          {/* Cart icon + badge */}
+          <button
+            id="cart-header-btn"
+            onClick={() => router.push('/shop/cart')}
+            className="relative flex items-center justify-center w-11 h-11 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
+            aria-label={`View cart${totalCartQty > 0 ? ` — ${totalCartQty} item${totalCartQty !== 1 ? 's' : ''}` : ''}`}
+          >
+            <ShoppingCart className="w-6 h-6 text-white" />
+            {totalCartQty > 0 && (
+              <span className="absolute -top-1 -right-1 bg-orange-400 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 leading-none">
+                {totalCartQty > 99 ? '99+' : totalCartQty}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* Search input */}
         <div className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-slate-400" />
@@ -102,14 +130,20 @@ export default function ShopHome() {
                 selectedCategory === null ? 'bg-[#E6F1FB]' : 'hover:bg-slate-100'
               }`}
             >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                selectedCategory === null ? 'bg-[#185FA5] text-white' : 'bg-white shadow-sm text-[#185FA5]'
-              }`}>
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  selectedCategory === null
+                    ? 'bg-[#185FA5] text-white'
+                    : 'bg-white shadow-sm text-[#185FA5]'
+                }`}
+              >
                 <Package className="w-6 h-6" />
               </div>
-              <span className={`text-[11px] font-medium ${
-                selectedCategory === null ? 'text-[#185FA5]' : 'text-slate-600'
-              }`}>
+              <span
+                className={`text-[11px] font-medium ${
+                  selectedCategory === null ? 'text-[#185FA5]' : 'text-slate-600'
+                }`}
+              >
                 All
               </span>
             </button>
@@ -124,15 +158,20 @@ export default function ShopHome() {
                     isSelected ? 'bg-[#E6F1FB]' : 'hover:bg-slate-100'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    isSelected ? 'bg-[#185FA5] text-white' : 'bg-white shadow-sm text-[#185FA5]'
-                  }`}>
-                    {/* Reusing Package icon for categories for now */}
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      isSelected
+                        ? 'bg-[#185FA5] text-white'
+                        : 'bg-white shadow-sm text-[#185FA5]'
+                    }`}
+                  >
                     <Package className="w-5 h-5" />
                   </div>
-                  <span className={`text-[11px] font-medium whitespace-nowrap truncate w-full px-1 ${
-                    isSelected ? 'text-[#185FA5]' : 'text-slate-600'
-                  }`}>
+                  <span
+                    className={`text-[11px] font-medium whitespace-nowrap truncate w-full px-1 ${
+                      isSelected ? 'text-[#185FA5]' : 'text-slate-600'
+                    }`}
+                  >
                     {category}
                   </span>
                 </button>
@@ -147,7 +186,7 @@ export default function ShopHome() {
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
           {selectedCategory ? `${selectedCategory} Products` : 'All Products'}
         </h2>
-        
+
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-slate-100">
             <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -155,48 +194,93 @@ export default function ShopHome() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {filteredProducts.map((product) => (
-              <div key={product._id} className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col h-full relative">
-                {/* Product Image area */}
-                <div className="aspect-square bg-slate-50 rounded-xl mb-3 flex items-center justify-center p-4 overflow-hidden relative">
-                  {product.imageUrl ? (
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <Package className="w-12 h-12 text-slate-300" />
-                  )}
-                  {/* Stock Badge */}
-                  {!product.inStock && (
-                    <div className="absolute top-2 left-2 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded-full">
-                      Out of Stock
-                    </div>
-                  )}
-                </div>
+            {filteredProducts.map((product) => {
+              const cartItem = cartItems.find((i) => i.productId === product._id);
+              const qty = cartItem?.quantity ?? 0;
 
-                {/* Product Info */}
-                <div className="flex-1 flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-medium mb-1 line-clamp-1 uppercase tracking-wider">{product.brand}</span>
-                  <h3 className="text-sm font-semibold text-slate-900 leading-tight mb-1 line-clamp-2">{product.name}</h3>
-                  <span className="text-xs text-slate-500 mb-2">{product.weight || '1 unit'}</span>
-                  
-                  <div className="mt-auto pt-2 flex items-center justify-between">
-                    <span className="text-base font-bold text-slate-900">₹{product.price}</span>
-                    
-                    <button
-                      onClick={() => handleAdd(product)}
-                      disabled={!product.inStock}
-                      className="bg-[#E6F1FB] text-[#185FA5] hover:bg-[#185FA5] hover:text-white transition-colors w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 min-w-[44px] min-h-[44px]"
-                      aria-label={`Add ${product.name} to order`}
-                    >
-                      <Plus className="w-5 h-5" />
-                    </button>
+              return (
+                <div
+                  key={product._id}
+                  className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col h-full relative"
+                >
+                  {/* Product Image area */}
+                  <div className="aspect-square bg-slate-50 rounded-xl mb-3 flex items-center justify-center p-4 overflow-hidden relative">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <Package className="w-12 h-12 text-slate-300" />
+                    )}
+                    {/* Out of stock badge */}
+                    {!product.inStock && (
+                      <div className="absolute top-2 left-2 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded-full">
+                        Out of Stock
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="flex-1 flex flex-col">
+                    <span className="text-[10px] text-slate-500 font-medium mb-1 line-clamp-1 uppercase tracking-wider">
+                      {product.brand}
+                    </span>
+                    <h3 className="text-sm font-semibold text-slate-900 leading-tight mb-1 line-clamp-2">
+                      {product.name}
+                    </h3>
+                    <span className="text-xs text-slate-500 mb-2">
+                      {product.weight || '1 unit'}
+                    </span>
+
+                    <div className="mt-auto pt-2 flex items-center justify-between">
+                      <span className="text-base font-bold text-slate-900">
+                        ₹{product.price}
+                      </span>
+
+                      {/* Add button ↔ Quantity stepper — same bounding box, no layout shift */}
+                      {qty === 0 ? (
+                        <button
+                          id={`add-${product._id}`}
+                          onClick={() => addItem(product._id)}
+                          disabled={!product.inStock}
+                          className="bg-[#E6F1FB] text-[#185FA5] hover:bg-[#185FA5] hover:text-white transition-colors w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                          aria-label={`Add ${product.name} to order`}
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      ) : (
+                        <div
+                          className="flex items-center gap-1 h-11"
+                          style={{ width: 'fit-content' }}
+                        >
+                          <button
+                            id={`dec-${product._id}`}
+                            onClick={() => updateQuantity(product._id, qty - 1)}
+                            className="w-8 h-8 rounded-full bg-[#E6F1FB] text-[#185FA5] hover:bg-[#185FA5] hover:text-white transition-colors flex items-center justify-center"
+                            aria-label={`Decrease quantity of ${product.name}`}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="text-sm font-bold text-slate-900 min-w-[20px] text-center tabular-nums">
+                            {qty}
+                          </span>
+                          <button
+                            id={`inc-${product._id}`}
+                            onClick={() => addItem(product._id)}
+                            className="w-8 h-8 rounded-full bg-[#E6F1FB] text-[#185FA5] hover:bg-[#185FA5] hover:text-white transition-colors flex items-center justify-center"
+                            aria-label={`Increase quantity of ${product.name}`}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

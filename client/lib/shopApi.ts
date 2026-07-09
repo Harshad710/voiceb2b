@@ -45,9 +45,63 @@ export async function fetchProducts(): Promise<Product[]> {
 }
 
 /**
- * Placeholder for Phase 3b: Create order.
+ * Submits a new order on behalf of the authenticated retailer.
+ *
+ * Security contract (mirrors Phase 3a backend):
+ *  - Sends ONLY { items: [{ productId, quantity }] }.
+ *  - Never sends price, priceAtPurchase, or retailerId — the server
+ *    derives all of that from the JWT and live product data.
+ *
+ * Throws a typed error with a `code` field for distinct failure modes:
+ *  'AUTH'    → 401: token missing/expired; caller should redirect to /shop/login
+ *  'FORBID'  → 403
+ *  'BAD_REQ' → 400 (e.g. a product went out of stock between add and checkout)
+ *  'NETWORK' → fetch threw (no connection)
+ *  'SERVER'  → 5xx
  */
-export async function createOrder(items: { productId: string; quantity: number }[]) {
-  console.log('TODO: Phase 3b - Create Order API call', items);
-  throw new Error('Not implemented yet');
+export class OrderError extends Error {
+  code: 'AUTH' | 'FORBID' | 'BAD_REQ' | 'NETWORK' | 'SERVER';
+  constructor(message: string, code: OrderError['code']) {
+    super(message);
+    this.name = 'OrderError';
+    this.code = code;
+  }
+}
+
+export async function createOrder(
+  items: { productId: string; quantity: number }[]
+): Promise<import('./types').Order> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/api/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...retailerAuthHeaders(),
+      },
+      body: JSON.stringify({ items }),
+    });
+  } catch {
+    throw new OrderError('Network error — check your connection.', 'NETWORK');
+  }
+
+  if (res.status === 401) {
+    throw new OrderError('Session expired. Please log in again.', 'AUTH');
+  }
+  if (res.status === 403) {
+    throw new OrderError("You don't have permission to place orders.", 'FORBID');
+  }
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({}));
+    throw new OrderError(
+      body?.message ?? 'Invalid order — one or more items may be unavailable.',
+      'BAD_REQ'
+    );
+  }
+  if (!res.ok) {
+    throw new OrderError('Server error — please try again in a moment.', 'SERVER');
+  }
+
+  const json = await res.json();
+  return json.data as import('./types').Order;
 }
