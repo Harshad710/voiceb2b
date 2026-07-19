@@ -18,6 +18,33 @@ export function getRetailerToken(): string | null {
 }
 
 /**
+ * Returns the stored retailer identity data or null if not logged in.
+ */
+export function getRetailerData(): { _id: string; name: string; phone: string } | null {
+  if (typeof window === 'undefined') return null;
+  const data = localStorage.getItem('retailer_data');
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Logs out the retailer by clearing local storage and optionally redirecting.
+ */
+export function logoutRetailer(redirectFn?: () => void) {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('retailer_token');
+    localStorage.removeItem('retailer_data');
+  }
+  if (redirectFn) {
+    redirectFn();
+  }
+}
+
+/**
  * Builds the Authorization header for retailer API calls.
  * Returns an empty object if no token is present so the spread still works.
  */

@@ -28,8 +28,9 @@ export default function ShopLoginPage() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store as retailer_token
+      // Store as retailer_token and retailer_data
       localStorage.setItem('retailer_token', data.token);
+      localStorage.setItem('retailer_data', JSON.stringify(data.data));
       
       // Redirect to shop home
       router.push('/shop');

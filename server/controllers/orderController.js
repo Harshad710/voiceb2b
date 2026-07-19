@@ -7,7 +7,7 @@ const getOrders = async (req, res, next) => {
   try {
     const orders = await Order.find()
       .populate('retailerId', 'name phone') // surface useful retailer fields
-      .populate('items.productId', 'name brand price'); // surface product details per line item
+      .populate('items.productId'); // surface full product details per line item
     res.status(200).json({ success: true, count: orders.length, data: orders });
   } catch (error) {
     next(error);
@@ -32,7 +32,7 @@ const getOrdersByRetailer = async (req, res, next) => {
     }
 
     const orders = await Order.find({ retailerId: req.params.retailerId })
-      .populate('items.productId', 'name brand price')
+      .populate('items.productId')
       .sort({ createdAt: -1 }); // most recent first
     res.status(200).json({ success: true, count: orders.length, data: orders });
   } catch (error) {
@@ -47,7 +47,7 @@ const getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('retailerId', 'name phone')
-      .populate('items.productId', 'name brand price');
+      .populate('items.productId');
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }

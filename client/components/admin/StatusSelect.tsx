@@ -33,7 +33,8 @@ export default function StatusSelect({ orderId, currentStatus, onSuccess }: Prop
   // Tracks the optimistically-displayed value during the update
   const [displayedStatus, setDisplayedStatus] = useState<OrderStatus>(currentStatus);
 
-  const handleChange = async (newStatus: string) => {
+  const handleChange = async (newStatus: string | null) => {
+    if (!newStatus) return;
     const typedStatus = newStatus as OrderStatus;
     if (typedStatus === displayedStatus) return;
 
