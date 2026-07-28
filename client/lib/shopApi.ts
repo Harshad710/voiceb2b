@@ -132,3 +132,31 @@ export async function createOrder(
   const json = await res.json();
   return json.data as import('./types').Order;
 }
+
+/**
+ * Expected shape of the search endpoint response.
+ */
+export interface SearchResponse {
+  success: boolean;
+  count: number;
+  matchType: 'exact' | 'fuzzy' | 'none';
+  data: Product[];
+}
+
+/**
+ * Searches products by query.
+ * Accepts an optional AbortSignal to cancel in-flight requests (preventing race conditions).
+ */
+export async function searchProducts(query: string, signal?: AbortSignal): Promise<SearchResponse> {
+  const res = await fetch(`${BASE_URL}/api/products/search?q=${encodeURIComponent(query)}`, {
+    cache: 'no-store',
+    signal,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Search failed (${res.status} ${res.statusText})`);
+  }
+
+  const json = await res.json();
+  return json as SearchResponse;
+}

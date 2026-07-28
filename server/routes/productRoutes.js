@@ -6,6 +6,7 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  getSearchResults,
 } = require('../controllers/productController');
 
 const protect  = require('../middleware/authMiddleware');
@@ -17,6 +18,12 @@ const isAdmin  = require('../middleware/isAdmin');
 router.route('/')
   .get(getProducts)
   .post(protect, isAdmin, createProduct);
+
+// ── /api/products/search ──────────────────────────────────────────────────────
+// GET — Public: two-stage search (MongoDB $text → Fuse.js fuzzy fallback)
+// Must be registered BEFORE /:id so Express doesn't treat "search" as an ID.
+router.route('/search')
+  .get(getSearchResults);
 
 // ── /api/products/:id ─────────────────────────────────────────────────────────
 // GET    — Public: retailer product detail view (Phase 3)

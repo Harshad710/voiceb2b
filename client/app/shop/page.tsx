@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Package, Plus, Minus, ShoppingCart } from 'lucide-react';
-import { fetchProducts } from '@/lib/shopApi';
+import { Search, Package, Plus, Minus, ShoppingCart, AlertCircle } from 'lucide-react';
+import { fetchProducts, searchProducts } from '@/lib/shopApi';
 import { useCartStore } from '@/lib/cartStore';
 import { Product } from '@/lib/types';
 
@@ -13,6 +13,13 @@ export default function ShopHome() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  // Search state
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchMatchType, setSearchMatchType] = useState<'exact' | 'fuzzy' | 'none' | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  
   const router = useRouter();
 
   // Cart store
@@ -45,15 +52,55 @@ export default function ShopHome() {
     return Array.from(cats).sort();
   }, [products]);
 
+  // Debounced search effect
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchResults([]);
+      setSearchMatchType(null);
+      setSearchError('');
+      setIsSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError('');
+      
+      try {
+        const res = await searchProducts(query, controller.signal);
+        setSearchResults(res.data);
+        setSearchMatchType(res.matchType);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          setSearchError(err.message || 'Search failed. Please try again.');
+          setSearchResults([]);
+          setSearchMatchType(null);
+        }
+      } finally {
+        // Only turn off loading if this request wasn't aborted by a newer one
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [searchQuery]);
+
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.brand.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
-      return matchesSearch && matchesCategory;
+    // If we have an active search, filter the search results. Otherwise, filter the full catalog.
+    const baseProducts = searchQuery.trim() ? searchResults : products;
+    
+    return baseProducts.filter((p) => {
+      return selectedCategory ? p.category === selectedCategory : true;
     });
-  }, [products, searchQuery, selectedCategory]);
+  }, [products, searchResults, searchQuery, selectedCategory]);
 
   if (loading) {
     return (
@@ -187,10 +234,33 @@ export default function ShopHome() {
           {selectedCategory ? `${selectedCategory} Products` : 'All Products'}
         </h2>
 
-        {filteredProducts.length === 0 ? (
+        {searchMatchType === 'fuzzy' && (
+          <p className="text-sm text-slate-500 mb-4 -mt-2">
+            Showing similar matches
+          </p>
+        )}
+
+        {isSearching ? (
+          <div className="flex justify-center items-center py-12 bg-white rounded-xl shadow-sm border border-slate-100">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#185FA5]"></div>
+          </div>
+        ) : searchError ? (
+          <div className="flex flex-col items-center justify-center py-10 bg-white rounded-xl shadow-sm border border-red-100 text-center px-4">
+            <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
+            <p className="text-sm text-red-600 font-medium">{searchError}</p>
+          </div>
+        ) : searchQuery.trim() && searchMatchType === 'none' ? (
+          <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-slate-100">
+            <Search className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-600 font-medium mb-1">No results found</p>
+            <p className="text-sm text-slate-500">
+              We couldn't find anything matching &quot;{searchQuery}&quot;
+            </p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-slate-100">
             <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">No products found.</p>
+            <p className="text-slate-500">No products found in this category.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
