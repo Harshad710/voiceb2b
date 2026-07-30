@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Package, Plus, Minus, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Search, Package, Plus, Minus, ShoppingCart, AlertCircle, Mic } from 'lucide-react';
 import { fetchProducts, searchProducts } from '@/lib/shopApi';
 import { useCartStore } from '@/lib/cartStore';
 import { Product } from '@/lib/types';
+import VoiceSearchButton from '@/components/VoiceSearchButton';
 
 export default function ShopHome() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -14,12 +15,30 @@ export default function ShopHome() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
-  // Search state
+  // Search state (shared by typed search and voice search)
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchMatchType, setSearchMatchType] = useState<'exact' | 'fuzzy' | 'none' | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState('');
+  const [searchError, setSearchError] = useState('');   // typed search errors
+  const [voiceSearchError, setVoiceSearchError] = useState(''); // voice request failures
+  const [showNoMatchToast, setShowNoMatchToast] = useState(false);
+
+  // AbortController ref for voice search in-flight requests
+  const voiceAbortControllerRef = useRef<AbortController | null>(null);
   
+  // Flag to know if the current search was voice-triggered (so we can pick the right error UI)
+  const isVoiceSearchRef = useRef(false);
+  
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerNoMatchToast = useCallback(() => {
+    setShowNoMatchToast(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setShowNoMatchToast(false);
+      toastTimerRef.current = null;
+    }, 3500);
+  }, []);
+
   const router = useRouter();
 
   // Cart store
@@ -52,27 +71,35 @@ export default function ShopHome() {
     return Array.from(cats).sort();
   }, [products]);
 
-  // Debounced search effect
+  // Debounced typed search effect
   useEffect(() => {
     const query = searchQuery.trim();
     if (!query) {
       setSearchResults([]);
       setSearchMatchType(null);
       setSearchError('');
+      setVoiceSearchError('');
+      setShowNoMatchToast(false);
       setIsSearching(false);
+      isVoiceSearchRef.current = false;
       return;
     }
 
     const controller = new AbortController();
-    
+
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
       setSearchError('');
-      
+      setVoiceSearchError('');
+      isVoiceSearchRef.current = false;
+
       try {
         const res = await searchProducts(query, controller.signal);
         setSearchResults(res.data);
         setSearchMatchType(res.matchType);
+        if (res.matchType === 'none') {
+          triggerNoMatchToast();
+        }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
           setSearchError(err.message || 'Search failed. Please try again.');
@@ -93,14 +120,76 @@ export default function ShopHome() {
     };
   }, [searchQuery]);
 
+  // ── Voice search handlers ────────────────────────────────────────────────
+
+  /**
+   * Called by VoiceSearchButton when the user finishes speaking.
+   * Aborts any stale previous voice request, then fires the search.
+   */
+  const handleVoiceSearch = useCallback(async (transcript: string, _signal: AbortSignal) => {
+    // Abort any still-in-flight voice request from a prior session
+    if (voiceAbortControllerRef.current) {
+      voiceAbortControllerRef.current.abort();
+    }
+    // Create a fresh controller owned by the parent for this request.
+    // The component's _signal is not used here — we own abort lifecycle here.
+    const controller = new AbortController();
+    voiceAbortControllerRef.current = controller;
+
+    // Populate the search input so the user can see what was heard
+    setSearchQuery(transcript);
+    isVoiceSearchRef.current = true;
+    setIsSearching(true);
+    setSearchError('');
+    setVoiceSearchError('');
+    setShowNoMatchToast(false);
+    setSearchResults([]);
+    setSearchMatchType(null);
+
+      try {
+      const res = await searchProducts(transcript, controller.signal);
+      // Guard: if this request was aborted (newer voice search fired), drop results
+      if (controller.signal.aborted) return;
+      setSearchResults(res.data);
+      setSearchMatchType(res.matchType);
+      if (res.matchType === 'none') {
+        triggerNoMatchToast();
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') return; // expected when user starts a new voice search
+      setVoiceSearchError('Something went wrong — tap the mic to try again');
+      setSearchResults([]);
+      setSearchMatchType(null);
+    } finally {
+      if (!controller.signal.aborted) {
+        setIsSearching(false);
+      }
+    }
+  }, []);
+
+  /**
+   * Called by VoiceSearchButton right before firing onSearch.
+   * Shows the spinner immediately so there's no lag between overlay close and results.
+   */
+  const handleVoiceSearchStart = useCallback(() => {
+    setIsSearching(true);
+    setVoiceSearchError('');
+    setSearchError('');
+    setShowNoMatchToast(false);
+    setSearchResults([]);
+    setSearchMatchType(null);
+    isVoiceSearchRef.current = true;
+  }, []);
+
   const filteredProducts = useMemo(() => {
-    // If we have an active search, filter the search results. Otherwise, filter the full catalog.
-    const baseProducts = searchQuery.trim() ? searchResults : products;
+    // If we have an active search AND it's not a 'none' match, filter the search results. 
+    // Otherwise (empty query or 'none' match), filter the full catalog.
+    const baseProducts = searchQuery.trim() && searchMatchType !== 'none' ? searchResults : products;
     
     return baseProducts.filter((p) => {
       return selectedCategory ? p.category === selectedCategory : true;
     });
-  }, [products, searchResults, searchQuery, selectedCategory]);
+  }, [products, searchResults, searchQuery, selectedCategory, searchMatchType]);
 
   if (loading) {
     return (
@@ -158,10 +247,16 @@ export default function ShopHome() {
           </div>
           <input
             type="text"
-            className="w-full pl-10 pr-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-white bg-white text-slate-900 placeholder:text-slate-500 shadow-inner"
+            className="w-full pl-10 pr-14 py-3 rounded-xl border-none focus:ring-2 focus:ring-white bg-white text-slate-900 placeholder:text-slate-500 shadow-inner"
             placeholder="Search products or brands..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {/* ── Voice Search Button (inline in search bar) ── */}
+          <VoiceSearchButton
+            onSearch={handleVoiceSearch}
+            onSearchStart={handleVoiceSearchStart}
+            isSearching={isSearching}
           />
         </div>
       </div>
@@ -244,18 +339,23 @@ export default function ShopHome() {
           <div className="flex justify-center items-center py-12 bg-white rounded-xl shadow-sm border border-slate-100">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#185FA5]"></div>
           </div>
+        ) : voiceSearchError ? (
+          // Voice request failure — network error / backend down / non-2xx.
+          // Visually distinct from the 'none' matchType state: different icon, amber accent.
+          <div className="flex flex-col items-center justify-center py-10 bg-white rounded-xl shadow-sm border border-amber-100 text-center px-4">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
+              style={{ background: 'rgba(251, 191, 36, 0.12)' }}
+            >
+              <Mic className="w-7 h-7 text-amber-500" strokeWidth={1.8} />
+            </div>
+            <p className="text-sm font-semibold text-amber-700 mb-1">Something went wrong</p>
+            <p className="text-xs text-amber-600">{voiceSearchError}</p>
+          </div>
         ) : searchError ? (
           <div className="flex flex-col items-center justify-center py-10 bg-white rounded-xl shadow-sm border border-red-100 text-center px-4">
             <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
             <p className="text-sm text-red-600 font-medium">{searchError}</p>
-          </div>
-        ) : searchQuery.trim() && searchMatchType === 'none' ? (
-          <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-slate-100">
-            <Search className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium mb-1">No results found</p>
-            <p className="text-sm text-slate-500">
-              We couldn't find anything matching &quot;{searchQuery}&quot;
-            </p>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-slate-100">
@@ -353,6 +453,22 @@ export default function ShopHome() {
             })}
           </div>
         )}
+      </div>
+
+      {/* ── No Match Toast (Bottom Left) ────────────────────────────── */}
+      <div className="fixed inset-x-0 bottom-24 z-[100] pointer-events-none flex justify-center">
+        <div className="w-full max-w-md px-4 flex justify-start">
+          <div
+            className={`transition-all duration-300 ${
+              showNoMatchToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-lg shadow-xl text-sm font-medium flex items-center gap-2">
+              <Search className="w-4 h-4 text-slate-300 shrink-0" />
+              <span>No exact match found, order other products.</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

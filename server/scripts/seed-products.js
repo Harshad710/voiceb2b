@@ -167,6 +167,68 @@ const products = [
     aliases: ['chocolate', 'dairy milk choklate', 'cadbary', 'chaklet', 'milk chocolate'] },
   { name: 'Amul Butter', brand: 'Amul', category: 'Confectionery', weight: '100g', price: 56,
     aliases: ['makhan', 'amul makhan', 'butter', 'amull', 'makhkan'] },
+
+  // --- NEW ADDITIONS (24 Products) ---
+
+  // Staples
+  { name: 'Saffola Gold Oil', brand: 'Saffola', category: 'Staples', weight: '1L', price: 155,
+    aliases: ['tel', 'cooking oil', 'safola', 'safola gold', 'safol'] }, // Collision: tel, cooking oil
+  { name: 'Madhur Sugar', brand: 'Madhur', category: 'Staples', weight: '1kg', price: 50,
+    aliases: ['chini', 'shakkar', 'madhur cheeni', 'madhur sugar', 'suger'] },
+  { name: 'Tata Sampann Moong Dal', brand: 'Tata', category: 'Staples', weight: '500g', price: 85,
+    aliases: ['dal', 'moong dal', 'mung dal', 'tata mung', 'mong dal'] }, // Exception: 4 words to match Toor Dal
+  { name: 'Rajdhani Poha', brand: 'Rajdhani', category: 'Staples', weight: '500g', price: 45,
+    aliases: ['poha', 'poaha', 'rajdhani', 'chivda', 'rajdani'] },
+
+  // Beverages
+  { name: 'Red Label Tea', brand: 'Brooke Bond', category: 'Beverages', weight: '250g', price: 140,
+    aliases: ['chai', 'tea patti', 'red lebel', 'red label', 'brok bond'] }, // Collision: chai, tea patti
+  { name: 'Coca Cola', brand: 'Coca Cola', category: 'Beverages', weight: '1.25L', price: 65,
+    aliases: ['cold drink', 'coke', 'cocacola', 'thanda', 'koka kola'] },
+  { name: 'Bru Instant Coffee', brand: 'Bru', category: 'Beverages', weight: '50g', price: 95,
+    aliases: ['coffee', 'bru', 'brew coffee', 'bru kofi', 'koffi'] },
+  { name: 'Red Bull', brand: 'Red Bull', category: 'Beverages', weight: '250ml', price: 125,
+    aliases: ['energy drink', 'redbul', 'red bull', 'red bull can', 'redbal'] },
+
+  // Snacks
+  { name: 'Bingo Mad Angles', brand: 'Bingo', category: 'Snacks', weight: '70g', price: 20,
+    aliases: ['chips', 'bingo', 'mad angles', 'bngo', 'kurkure type'] }, // Collision: chips
+  { name: 'Maggi Masala Noodles', brand: 'Nestle', category: 'Snacks', weight: '70g', price: 14,
+    aliases: ['noodles', 'magi', 'maggie', 'maagi', '2 minute noodle'] },
+  { name: 'Parle Hide & Seek', brand: 'Parle', category: 'Snacks', weight: '100g', price: 30,
+    aliases: ['biscuit', 'hide n seek', 'hiden seek', 'choco chip', 'hidenseek'] },
+  { name: 'Britannia Digestive', brand: 'Britannia', category: 'Snacks', weight: '100g', price: 25,
+    aliases: ['biscuit', 'digestive', 'britania', 'digestiv', 'healthy biscuit'] },
+
+  // Personal care
+  { name: 'Dettol Soap', brand: 'Dettol', category: 'Personal care', weight: '75g', price: 28,
+    aliases: ['sabun', 'soap', 'detol', 'dettol sabun', 'detol soap'] }, // Collision: sabun, soap
+  { name: 'Pepsodent Toothpaste', brand: 'Pepsodent', category: 'Personal care', weight: '150g', price: 80,
+    aliases: ['toothpaste', 'paste', 'pepsodent', 'pepsodant', 'pepsodent paste'] }, // Collision: toothpaste, paste
+  { name: 'Glow & Lovely', brand: 'Unilever', category: 'Personal care', weight: '50g', price: 110,
+    aliases: ['cream', 'fair n lovely', 'glow n lovely', 'face cream', 'fair and lovely'] },
+  { name: 'Ponds Talcum Powder', brand: 'Ponds', category: 'Personal care', weight: '100g', price: 105,
+    aliases: ['powder', 'ponds powder', 'face powder', 'pond', 'pondz'] },
+
+  // Home care
+  { name: 'Tide Plus', brand: 'P&G', category: 'Home care', weight: '1kg', price: 105,
+    aliases: ['detergent', 'washing powder', 'tide', 'tide powder', 'taid'] }, // Collision: detergent, washing powder
+  { name: 'Domex Toilet Cleaner', brand: 'Unilever', category: 'Home care', weight: '500ml', price: 90,
+    aliases: ['toilet cleaner', 'domex', 'bathroom clener', 'domax', 'toilet acid'] }, // Collision: toilet cleaner
+  { name: 'Lizol Surface Cleaner', brand: 'Reckitt', category: 'Home care', weight: '500ml', price: 105,
+    aliases: ['floor cleaner', 'lizol', 'pochha liquid', 'lysol', 'lizal'] },
+  { name: 'Comfort Fabric Conditioner', brand: 'Unilever', category: 'Home care', weight: '220ml', price: 55,
+    aliases: ['fabric conditioner', 'comfort', 'kamfort', 'kapde ka perfume', 'comfart'] },
+
+  // Confectionery
+  { name: 'Nestle KitKat', brand: 'Nestle', category: 'Confectionery', weight: '38g', price: 25,
+    aliases: ['chocolate', 'kitkat', 'kit kat', 'wafers chocolate', 'kitkat choco'] }, // Collision: chocolate
+  { name: 'Center Fresh Gum', brand: 'Perfetti', category: 'Confectionery', weight: '15g', price: 10,
+    aliases: ['chewing gum', 'center fresh', 'center fresh gum', 'chuingam', 'centar fresh'] },
+  { name: 'Mentos Mint', brand: 'Perfetti', category: 'Confectionery', weight: '10g', price: 10,
+    aliases: ['mint', 'mentos', 'mint candy', 'mentoz', 'mentos mint'] },
+  { name: 'Kinder Joy', brand: 'Ferrero', category: 'Confectionery', weight: '20g', price: 45,
+    aliases: ['chocolate', 'kinder joy', 'toy chocolate', 'kender joy', 'kinderjoy'] } // Natural collision on chocolate too
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────
